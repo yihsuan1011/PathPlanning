@@ -4,7 +4,7 @@ LocalPlanner* LocalPlanner::inst_ = nullptr;
 
 LocalPlanner* LocalPlanner::GetLocalPlanner(Arm* carm) {
     if (inst_ == nullptr)
-        inst_ = new LocalPlanner(Arm* carm);
+        inst_ = new LocalPlanner(carm);
     return inst_;
 }
 

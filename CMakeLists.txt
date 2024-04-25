@@ -23,11 +23,14 @@ find_package(PCL REQUIRED)
 
 
 set(header
-    # include/Planner.h 
+    include/Planner.h
+    include/OctreeGen.h 
+    include/GlobalPlanner.h
     # include/LocalPlanner.h 
 )
 set(src 
     # src/Planner.cpp
+    src/GlobalPlanner.cpp
     # src/LocalPlanner.cpp
     src/testOctree.cpp
 )

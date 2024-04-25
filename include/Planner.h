@@ -17,7 +17,7 @@ private:
     Planner(Arm* carm);
     static Planner *inst_;
     Arm* CArm;
-    LocalPlanner* LPlanner;
+    // LocalPlanner* LPlanner;
     // GlobalPlanner* GPlanner;
 
 public:

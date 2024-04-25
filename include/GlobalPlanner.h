@@ -1,45 +1,58 @@
 #pragma once
 
 #include "Planner.h"
-#include "visualization_msgs/Marker.h"
-#include "visualization_msgs/MarkerArray.h"
+#include "OctreeGen.h"
+// #include "visualization_msgs/Marker.h"
+// #include "visualization_msgs/MarkerArray.h"
 
-#include "fcl/config.h"
-#include "fcl/narrowphase/distance.h"
-#include "fcl/common/types.h"
+// #include "fcl/config.h"
+// #include "fcl/narrowphase/distance.h"
+// #include "fcl/common/types.h"
+
+#include <ompl/base/SpaceInformation.h>
+#include <ompl/base/ProblemDefinition.h>
+#include <ompl/base/spaces/RealVectorStateSpace.h>
+#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
+#include <ompl/geometric/planners/rrt/InformedRRTstar.h>
+#include <ompl/geometric/SimpleSetup.h>
+#include <ompl/config.h>
+
+// #include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
+// #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseStamped.h>
 
 class GlobalPlanner
 {
 private:
-    static GlobalPlanner* inst_;
-    Arm* CArm;
-    ros::NodeHandle n;
-    ros::Subscriber human_sub;
-public:
-    static LocalPlanner* GetLocalPlanner(Arm* carm);
-    LocalPlanner(Arm* carm);
-    ~LocalPlanner();
-
-    void UpdateState(void);
-    void APF_acc(void);
-    float Attractor(float x, float x_dot);
-    float Distractor(float x, float x_dot);
-    void CreateFCL(void);
-    void HumanCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
+    bool isStateValid(const ompl::base::State *state);
+    ompl::base::OptimizationObjectivePtr getObjWithCostToGo(const ompl::base::SpaceInformationPtr& si);
+    void SetStart(Eigen::Vector3f start);
+    void SetGoal(Eigen::Vector3f goal);
+    void Plan(void);
     void InitialROS(void);
     void Ros_spin(void);
     void StopROS(void);
+    
+    static GlobalPlanner* inst_;
+    Arm* CArm;
+    ompl::base::StateSpacePtr space;
+    ompl::base::SpaceInformationPtr si;
+    ompl::base::ProblemDefinitionPtr pdef;
+
+    std::thread* ros_thread;
+    ros::NodeHandle n;
+    ros::Rate* loop_rate;
+    ros::Publisher path_pub;
+    ros::Publisher octree_pub;
+    ros::Subscriber pointcloud_sub;
+    
+public:
+    static GlobalPlanner* GetGlobalPlanner(Arm* carm);
+    GlobalPlanner(Arm* carm);
+    ~GlobalPlanner();
 
     Eigen::Vector3f curr;
-    Eigen::Vector3f last;
-    Eigen::Vector3f goal;
-    vector<Eigen::Vector3f> curr_obs;
-    vector<Eigen::Vector3f> last_obs;
-    float dt;
-    Eigen::Vector3f acc;
-    vector<Eigen::Vector3f> human;
-    vector<int> human_IDlist;
-    // vector<std::shared_ptr<fcl::CollisionGeometry>> human_shape;
-    vector<fcl::CollisionObjectf> human_body;
-    // head, body, r_arm1, r_arm2, r_palm, l_arm1, l_arm2, l_palm
+    OctreeGen octreeGen;
+    octomap::OcTree* static_ob;
 };
