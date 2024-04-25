@@ -11,6 +11,7 @@
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/uniform_sampling.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/octree/octree_pointcloud_changedetector.h>
 
 class OctreeGen{
     public:
@@ -43,6 +44,7 @@ class OctreeGen{
             
             sensor_msgs::PointCloud2 processed_cloud;
             PointCloudProcess(transformed_cloud, processed_cloud);
+            cloudDiff();
 
             octomap::Pointcloud octomapCloud;
             octomap::pointCloud2ToOctomap(processed_cloud, octomapCloud);
@@ -77,6 +79,7 @@ class OctreeGen{
             filter3.setLeafSize(0.05, 0.05, 0.05);
             filter3.filter(*cloud2);
             cloud = *cloud2;
+            if (last_cloud.size() == 0) last_cloud = cloud;
 
             pcl::toROSMsg(cloud, Pmsg);
             cloud_msg = Pmsg;
@@ -84,9 +87,30 @@ class OctreeGen{
             cloud_msg.header.frame_id = msg.header.frame_id;
         };
 
+        void cloudDiff (void) {
+            ROS_INFO("Cloud Diff");
+            pcl::octree::OctreePointCloudChangeDetector<pcl::PointXYZ> octree(0.5);
+            octree.setInputCloud(cloud.makeShared());
+            octree.addPointsFromInputCloud();
+            octree.switchBuffers();
+            octree.setInputCloud(last_cloud.makeShared());
+            octree.addPointsFromInputCloud();
+            std::vector<int> newPointIdxVector;
+            octree.getPointIndicesFromNewVoxels(newPointIdxVector);
+            pcl::copyPointCloud(cloud, newPointIdxVector, diff_cloud);
+            last_cloud = cloud;
+
+            pcl::toROSMsg(diff_cloud, diff_cloud_msg);
+            diff_cloud_msg.header.stamp = cloud_msg.header.stamp;
+            diff_cloud_msg.header.frame_id = cloud_msg.header.frame_id;
+        }
+
         pcl::PointCloud<pcl::PointXYZ> cloud;
+        pcl::PointCloud<pcl::PointXYZ> last_cloud;
+        pcl::PointCloud<pcl::PointXYZ> diff_cloud;
         octomap::OcTree* tree;
         sensor_msgs::PointCloud2 cloud_msg;
+        sensor_msgs::PointCloud2 diff_cloud_msg;
         octomap_msgs::Octomap octree_msg;
 
     private:

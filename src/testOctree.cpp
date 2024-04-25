@@ -104,10 +104,12 @@ int main (int argc, char** argv) {
     ros::Subscriber sub = nh.subscribe("/points2", 1, &OctreeGen::PointCloud2Octree, &octreeGen);
     ros::Publisher pub = nh.advertise<octomap_msgs::Octomap>("/octomap", 1);
     ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2>("/processed_cloud", 1);
+    ros::Publisher pub3 = nh.advertise<sensor_msgs::PointCloud2>("/diff_cloud", 1);
     ros::Rate rate(30);
     while(ros::ok()){
         pub.publish(octreeGen.octree_msg);
         pub2.publish(octreeGen.cloud_msg);
+        pub3.publish(octreeGen.diff_cloud_msg);
         ros::spinOnce();
         rate.sleep();
     }
