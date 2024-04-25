@@ -115,7 +115,7 @@ void GlobalPlanner::InitialROS(void) {
 
 void GlobalPlanner::Ros_spin(void) {
     while(ros::ok()){
-        static_ob = octreeGen.tree;
+        static_octree = octreeGen.tree;
         octree_pub.publish(octreeGen.octree_msg);
         ros::spinOnce();
         loop_rate->sleep();        

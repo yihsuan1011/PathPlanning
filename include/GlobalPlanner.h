@@ -54,5 +54,6 @@ public:
 
     Eigen::Vector3f curr;
     OctreeGen octreeGen;
-    octomap::OcTree* static_ob;
+    pcl::PointCloud<pcl::PointXYZ> static_cloud;
+    octomap::OcTree* static_octree;
 };
