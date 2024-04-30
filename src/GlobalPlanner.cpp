@@ -10,7 +10,9 @@ GlobalPlanner* GlobalPlanner::GetGlobalPlanner(Arm* carm) {
 
 GlobalPlanner::GlobalPlanner(Arm* carm) : octreeGen() {
     CArm = carm;
-    curr = Eigen::Vector3f(CArm->GetCurrentPosition(0), CArm->GetCurrentPosition(1), CArm->GetCurrentPosition(2));
+    curr = {CArm->GetCurrentPosition(0), CArm->GetCurrentPosition(1), CArm->GetCurrentPosition(2), 
+            CArm->GetCurrentOrientation(0), CArm->GetCurrentOrientation(1), CArm->GetCurrentOrientation(2), CArm->GetCurrentOrientation(3)};
+    // curr = Eigen::Vector3f(CArm->GetCurrentPosition(0), CArm->GetCurrentPosition(1), CArm->GetCurrentPosition(2));
     InitialROS();
     
     // Create static octree
@@ -66,18 +68,32 @@ bool GlobalPlanner::isStateValid(const ompl::base::State *state) {
 
     fcl::CollisionObjectf treeObj(static_tree);
     fcl::CollisionObjectf endeffectorObj(endeffector);
-    // fcl::CollisionObjectf bodyObj(body);
-    // fcl::CollisionObjectf mobileObj(mobile);
+    fcl::CollisionObjectf bodyObj(body);
+    fcl::CollisionObjectf mobileObj(mobile);
 
     fcl::Vector3f te(p1[0], p1[1], p1[2]);
+    fcl::Vector3f tb((0.0)/2/1000, (0.0)/2/1000, -(350.0)/2/1000);
+    fcl::Vector3f tm((0.0)/2/1000, (0.0)/2/1000, -(210.0)/2/1000-500.0/1000);
     fcl::Quaternionf re(q.w(), q.x(), q.y(), q.z());
+    fcl::Quaternionf rb(1, 0, 0, 0);
+    fcl::Quaternionf rm(1, 0, 0, 0);
     endeffectorObj.setTransform(re, te);
+    bodyObj.setTransform(rb, tb);
+    mobileObj.setTransform(rm, tm);
 
+    bool collision = false;
     fcl::CollisionRequestf requestType(1, false, 1, false);
     fcl::CollisionResultf collisionResult;
     fcl::collide(&endeffectorObj, &treeObj, requestType, collisionResult);
+    collision |= collisionResult.isCollision();
+    collisionResult.clear();
+    fcl::collide(&endeffectorObj, &bodyObj, requestType, collisionResult);
+    collision |= collisionResult.isCollision();
+    collisionResult.clear();
+    fcl::collide(&endeffectorObj, &mobileObj, requestType, collisionResult);
+    collision |= collisionResult.isCollision();
 
-    return (!collisionResult.isCollision());
+    return !collision;
 }
 
 ompl::base::OptimizationObjectivePtr GlobalPlanner::getObjWithCostToGo(const ompl::base::SpaceInformationPtr& si) {

@@ -61,7 +61,7 @@ public:
     GlobalPlanner(Arm* carm);
     ~GlobalPlanner();
 
-    Eigen::Vector3f curr;
+    vector<float> curr;
     OctreeGen octreeGen;
     pcl::PointCloud<pcl::PointXYZ> static_cloud;
     octomap::OcTree* static_octree;
