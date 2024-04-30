@@ -5,13 +5,17 @@
 // #include "visualization_msgs/Marker.h"
 // #include "visualization_msgs/MarkerArray.h"
 
-// #include "fcl/config.h"
-// #include "fcl/narrowphase/distance.h"
-// #include "fcl/common/types.h"
+#include "fcl/config.h"
+#include "fcl/geometry/octree/octree.h"
+#include "fcl/geometry/octree/octree-inl.h"
+#include "fcl/narrowphase/collision.h"
+#include "fcl/narrowphase/distance.h"
+#include "fcl/common/types.h"
 
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/ProblemDefinition.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
+#include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/geometric/planners/rrt/InformedRRTstar.h>
 #include <ompl/geometric/SimpleSetup.h>
@@ -27,8 +31,8 @@ class GlobalPlanner
 private:
     bool isStateValid(const ompl::base::State *state);
     ompl::base::OptimizationObjectivePtr getObjWithCostToGo(const ompl::base::SpaceInformationPtr& si);
-    void SetStart(Eigen::Vector3f start);
-    void SetGoal(Eigen::Vector3f goal);
+    void SetStart(vector<float> start);
+    void SetGoal(vector<float> goal);
     void Plan(void);
     void InitialROS(void);
     void Ros_spin(void);
@@ -39,6 +43,7 @@ private:
     ompl::base::StateSpacePtr space;
     ompl::base::SpaceInformationPtr si;
     ompl::base::ProblemDefinitionPtr pdef;
+    std::shared_ptr<fcl::CollisionGeometryf> static_tree;
 
     std::thread* ros_thread;
     ros::NodeHandle n;
