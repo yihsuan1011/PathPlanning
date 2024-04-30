@@ -13,10 +13,16 @@ GlobalPlanner::GlobalPlanner(Arm* carm) : octreeGen() {
     curr = Eigen::Vector3f(CArm->GetCurrentPosition(0), CArm->GetCurrentPosition(1), CArm->GetCurrentPosition(2));
     InitialROS();
     
+    // Create static octree
     while(!octreeGen.static_flag){};
     static_octree = octreeGen.ori_octree;
     fcl::OcTreef* tree = new fcl::OcTreef(std::shared_ptr<const octomap::OcTree>(static_octree));
     static_tree = std::shared_ptr<fcl::CollisionGeometryf>(tree);
+
+    // Create endeffector
+    endeffector = std::shared_ptr<fcl::CollisionGeometryf>(new fcl::Cylinderf(0.2 / 2, 0.28));
+    body = std::shared_ptr<fcl::CollisionGeometryf>(new fcl::Boxf(80.0/1000, 260.0/1000, 350.0/1000));
+    mobile = std::shared_ptr<fcl::CollisionGeometryf>(new fcl::Boxf(210.0/1000, 440.0/1000, 210.0/1000));
 
     // Planning space
     space = ompl::base::StateSpacePtr(new ompl::base::SE3StateSpace());
@@ -37,7 +43,6 @@ GlobalPlanner::GlobalPlanner(Arm* carm) : octreeGen() {
     // Problem definition
     pdef = ompl::base::ProblemDefinitionPtr(new ompl::base::ProblemDefinition(si));
     pdef->setOptimizationObjective(getObjWithCostToGo(si));
-
 }
 
 GlobalPlanner::~GlobalPlanner() {
@@ -46,7 +51,33 @@ GlobalPlanner::~GlobalPlanner() {
 }
 
 bool GlobalPlanner::isStateValid(const ompl::base::State *state) {
-    return false;
+    const ompl::base::SE3StateSpace::StateType* SE3state = state->as<ompl::base::SE3StateSpace::StateType>();
+    const ompl::base::RealVectorStateSpace::StateType* pos = SE3state->as<ompl::base::RealVectorStateSpace::StateType>(0);
+    const ompl::base::SO3StateSpace::StateType* rot = SE3state->as<ompl::base::SO3StateSpace::StateType>(1);
+
+    Eigen::Quaternionf q(rot->w, rot->x, rot->y, rot->z);
+    Eigen::Quaternionf p(0, 0, 0, 0.28 / 2);
+    Eigen::Quaternionf rotated_p = q * p * q.inverse();
+    Eigen::Vector3f p0 = rotated_p.vec();
+    Eigen::Vector3f p1 = Eigen::Vector3f(pos->values[0], pos->values[1], pos->values[2]) + p0;
+
+    Eigen::Matrix3f R = q.toRotationMatrix();
+    Eigen::Vector3f euler = R.eulerAngles(2, 1, 0);
+
+    fcl::CollisionObjectf treeObj(static_tree);
+    fcl::CollisionObjectf endeffectorObj(endeffector);
+    // fcl::CollisionObjectf bodyObj(body);
+    // fcl::CollisionObjectf mobileObj(mobile);
+
+    fcl::Vector3f te(p1[0], p1[1], p1[2]);
+    fcl::Quaternionf re(q.w(), q.x(), q.y(), q.z());
+    endeffectorObj.setTransform(re, te);
+
+    fcl::CollisionRequestf requestType(1, false, 1, false);
+    fcl::CollisionResultf collisionResult;
+    fcl::collide(&endeffectorObj, &treeObj, requestType, collisionResult);
+
+    return (!collisionResult.isCollision());
 }
 
 ompl::base::OptimizationObjectivePtr GlobalPlanner::getObjWithCostToGo(const ompl::base::SpaceInformationPtr& si) {
@@ -103,6 +134,10 @@ void GlobalPlanner::Plan(void) {
     if (solved) {
         ompl::geometric::PathGeometric* path = pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
         path->interpolate();
+
+        // ompl::geometric::PathSimplifier* pathBSpline = new og::PathSimplifier(si);
+		// smooth_path = new ompl::geometric::PathGeometric(dynamic_cast<const ompl::geometric::PathGeometric&>(*pdef->getSolutionPath()));
+		// pathBSpline->smoothBSpline(*smooth_path, 3);
 
         nav_msgs::Path msg;
         msg.header.frame_id = "base";

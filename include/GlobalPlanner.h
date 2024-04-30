@@ -43,7 +43,11 @@ private:
     ompl::base::StateSpacePtr space;
     ompl::base::SpaceInformationPtr si;
     ompl::base::ProblemDefinitionPtr pdef;
+    // ompl::geometric::PathGeometric smooth_path;
     std::shared_ptr<fcl::CollisionGeometryf> static_tree;
+    std::shared_ptr<fcl::CollisionGeometryf> endeffector;
+    std::shared_ptr<fcl::CollisionGeometryf> body;
+    std::shared_ptr<fcl::CollisionGeometryf> mobile;
 
     std::thread* ros_thread;
     ros::NodeHandle n;
