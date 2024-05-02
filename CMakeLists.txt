@@ -32,7 +32,8 @@ set(src
     # src/Planner.cpp
     src/GlobalPlanner.cpp
     # src/LocalPlanner.cpp
-    src/testOctree.cpp
+    # src/testOctree.cpp
+    src/testGlobal.cpp
 )
 # include_directories(${OCTOMAP_INCLUDE_DIRS})
 # target_link_libraries(${OCTOMAP_LIBRARIES})
@@ -44,7 +45,12 @@ include_directories(${PROJECT_SOURCE_DIR}/include ${catkin_INCLUDE_DIRS} ${OCTOM
 add_library(${PROJECT_NAME} SHARED ${header} ${src})
 # target_link_libraries(${PROJECT_NAME} Robot fcl ompl ${OCTOMAP_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} Robot fcl ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} ${PCL_LIBRARIES} ${OMPL_LIBRARIES})
+# add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS} ${airobots_calvin_EXPORTED_TARGETS})
 
-add_executable(testOctree src/testOctree.cpp)
-target_link_libraries(testOctree ${PROJECT_NAME} ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} ${PCL_LIBRARIES})
-target_include_directories(testOctree PUBLIC ${catkin_INCLUDE_DIRS} ${OCTOMAP_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+# add_executable(testOctree src/testOctree.cpp)
+# target_link_libraries(testOctree ${PROJECT_NAME} ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} ${PCL_LIBRARIES})
+# target_include_directories(testOctree PUBLIC ${catkin_INCLUDE_DIRS} ${OCTOMAP_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+
+add_executable(testGlobal src/testGlobal.cpp)
+target_link_libraries(testGlobal ${PROJECT_NAME} Robot fcl ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} ${PCL_LIBRARIES} ${OMPL_LIBRARIES})
+target_include_directories(testGlobal PUBLIC ${catkin_INCLUDE_DIRS} ${OCTOMAP_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${FCL_INCLUDE_DIRS} ${OMPL_INCLUDE_DIRS})

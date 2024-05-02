@@ -39,7 +39,7 @@ class OctreeGen{
         };
 
         void PointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg){
-            ROS_INFO("PointCloud to Octree");
+            // ROS_INFO("PointCloud to Octree");
             sensor_msgs::PointCloud2 transformed_cloud;
             tf::StampedTransform transform;
             try {
@@ -102,8 +102,8 @@ class OctreeGen{
             // ROS_INFO("Diff: %lu", diff_cloud.size());
             diffs.push_back(diff_cloud.size());
             if (diffs.size() > 30) diffs.pop_front();
-            // ROS_INFO("Size: %lu, Sum of diff: %u", diffs.size(), std::accumulate(diffs.begin(), diffs.end(), 0));
-            if (std::accumulate(diffs.begin(), diffs.end(), 0) < 100) static_flag = true;
+            ROS_INFO("Size: %lu, Sum of diff: %u", diffs.size(), std::accumulate(diffs.begin(), diffs.end(), 0));
+            if (diffs.size() == 30 && std::accumulate(diffs.begin(), diffs.end(), 0) < 100) static_flag = true;
         };
 
         void cloudDiff(pcl::PointCloud<pcl::PointXYZ>& cloud1, pcl::PointCloud<pcl::PointXYZ>& cloud2, pcl::PointCloud<pcl::PointXYZ>& diff) {

@@ -2,8 +2,6 @@
 
 #include "Planner.h"
 #include "OctreeGen.h"
-// #include "visualization_msgs/Marker.h"
-// #include "visualization_msgs/MarkerArray.h"
 
 #include "fcl/config.h"
 #include "fcl/geometry/octree/octree.h"
@@ -25,15 +23,15 @@
 #include <nav_msgs/Path.h>
 // #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
+#include "visualization_msgs/Marker.h"
+#include "visualization_msgs/MarkerArray.h"
 
 class GlobalPlanner
 {
 private:
     bool isStateValid(const ompl::base::State *state);
+    bool isIKValid(vector<float> pos);
     ompl::base::OptimizationObjectivePtr getObjWithCostToGo(const ompl::base::SpaceInformationPtr& si);
-    void SetStart(vector<float> start);
-    void SetGoal(vector<float> goal);
-    void Plan(void);
     void InitialROS(void);
     void Ros_spin(void);
     void StopROS(void);
@@ -54,15 +52,20 @@ private:
     ros::Rate* loop_rate;
     ros::Publisher path_pub;
     ros::Publisher octree_pub;
+    ros::Publisher marker_pub;
     ros::Subscriber pointcloud_sub;
     
 public:
     static GlobalPlanner* GetGlobalPlanner(Arm* carm);
     GlobalPlanner(Arm* carm);
     ~GlobalPlanner();
+    void SetStart(vector<float> start);
+    void SetGoal(vector<float> goal);
+    void Plan(void);
 
     vector<float> curr;
     OctreeGen octreeGen;
     pcl::PointCloud<pcl::PointXYZ> static_cloud;
     octomap::OcTree* static_octree;
+    nav_msgs::Path path_msg;
 };
