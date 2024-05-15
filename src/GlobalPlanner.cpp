@@ -2,24 +2,26 @@
 
 GlobalPlanner* GlobalPlanner::inst_ = nullptr;
 
-GlobalPlanner* GlobalPlanner::GetGlobalPlanner(Arm* carm) {
+GlobalPlanner* GlobalPlanner::GetGlobalPlanner(Arm* carm, OctreeGen* octreegen) {
     if (inst_ == nullptr)
-        inst_ = new GlobalPlanner(carm);
+        inst_ = new GlobalPlanner(carm, octreegen);
     return inst_;
 }
 
-GlobalPlanner::GlobalPlanner(Arm* carm) : octreeGen() {
+GlobalPlanner::GlobalPlanner(Arm* carm, OctreeGen* octreegen)/* : client_armR("armR")*/ {
     CArm = carm;
+    octreeGen = octreegen;
     // curr = {CArm->GetCurrentPosition(0), CArm->GetCurrentPosition(1), CArm->GetCurrentPosition(2), 
     //         CArm->GetCurrentOrientation(0), CArm->GetCurrentOrientation(1), CArm->GetCurrentOrientation(2), CArm->GetCurrentOrientation(3)};
     // curr = Eigen::Vector3f(CArm->GetCurrentPosition(0), CArm->GetCurrentPosition(1), CArm->GetCurrentPosition(2));
     InitialROS();
-    
+    // client_armR.run();
+
     // Create static octree
-    while(!octreeGen.static_flag) {
+    while(!octreeGen->static_flag) {
         // ROS_INFO("static_flag: %d", octreeGen.static_flag);
     };
-    static_octree = octreeGen.ori_octree;
+    static_octree = octreeGen->ori_octree;
     fcl::OcTreef* tree = new fcl::OcTreef(std::shared_ptr<const octomap::OcTree>(static_octree));
     static_tree = std::shared_ptr<fcl::CollisionGeometryf>(tree);
 
@@ -49,10 +51,13 @@ GlobalPlanner::GlobalPlanner(Arm* carm) : octreeGen() {
     pdef = ompl::base::ProblemDefinitionPtr(new ompl::base::ProblemDefinition(si));
     pdef->setOptimizationObjective(getObjWithCostToGo(si));
     ROS_INFO("Problem definition set up");
+
+    path_states = {};
 }
 
 GlobalPlanner::~GlobalPlanner() {
     StopROS();
+    delete ros_thread;
     inst_ = nullptr;
 }
 
@@ -64,13 +69,15 @@ bool GlobalPlanner::isStateValid(const ompl::base::State *state) {
     Eigen::Quaternionf q(rot->w, rot->x, rot->y, rot->z);
     // Eigen::Quaternionf p(0, 0, 0, 0.32 / 2);
     // Eigen::Quaternionf rotated_p = q * p * q.inverse();
+
     // Eigen::Vector3f p0 = rotated_p.vec();
     // Eigen::Vector3f p1 = Eigen::Vector3f(pos->values[0], pos->values[1], pos->values[2]) + p0;
 
     Eigen::Matrix3f R = q.toRotationMatrix();
     Eigen::Matrix3f Re = R * Eigen::AngleAxisf(-M_PI / 2, Eigen::Vector3f::UnitY());
     Eigen::Quaternionf qe(Re);
-    Eigen::Vector3f euler = R.eulerAngles(2, 1, 0);
+    // Eigen::Vector3f euler = R.eulerAngles(2, 1, 0);
+    Eigen::Vector3f euler = Q2Euler(q);
     Eigen::Vector3f m = Re * Eigen::Vector3f(0, 0, 0.32) + Eigen::Vector3f(pos->values[0], pos->values[1], pos->values[2]);
 
     vector<float> po = {pos->values[0], pos->values[1], pos->values[2], euler[0], euler[1], euler[2]};
@@ -155,6 +162,7 @@ bool GlobalPlanner::isIKValid(vector<float> pos) {
 ompl::base::OptimizationObjectivePtr GlobalPlanner::getObjWithCostToGo(const ompl::base::SpaceInformationPtr& space_info) {
     ompl::base::OptimizationObjectivePtr obj(new ompl::base::PathLengthOptimizationObjective(space_info));
     obj->setCostToGoHeuristic(&ompl::base::goalRegionCostToGo);
+    obj->setCostThreshold(ompl::base::Cost(1.5));
     return obj;
 }
 
@@ -211,14 +219,19 @@ void GlobalPlanner::Plan(void) {
         std::cout << "Found solution:" << std::endl;
         path->printAsMatrix(std::cout);
 
-        // nav_msgs::Path msg;
+        path_states.clear();
+
+        nav_msgs::Path msg;
         path_msg.header.frame_id = "base";
         path_msg.header.stamp = ros::Time::now();
         for (size_t i = 0; i < path->getStateCount(); i++) {
+            vector<float> Pstate;
             const ompl::base::SE3StateSpace::StateType* state = path->getState(i)->as<ompl::base::SE3StateSpace::StateType>();
             const ompl::base::RealVectorStateSpace::StateType* pos = state->as<ompl::base::RealVectorStateSpace::StateType>(0);
             const ompl::base::SO3StateSpace::StateType* rot = state->as<ompl::base::SO3StateSpace::StateType>(1);
             geometry_msgs::PoseStamped pose;
+            // std::cout << "postion " << i << ": " << pos->values[0] << " " << pos->values[1] << " " << pos->values[2] << std::endl;
+            // std::cout << "rotation " << i << ": " << rot->x << " " << rot->y << " " << rot->z << " " << rot->w << std::endl;
             pose.pose.position.x = pos->values[0];
             pose.pose.position.y = pos->values[1];
             pose.pose.position.z = pos->values[2];
@@ -226,17 +239,60 @@ void GlobalPlanner::Plan(void) {
             pose.pose.orientation.y = rot->y;
             pose.pose.orientation.z = rot->z;
             pose.pose.orientation.w = rot->w;
+            Pstate.push_back(pos->values[0]);
+            Pstate.push_back(pos->values[1]);
+            Pstate.push_back(pos->values[2]);
+            Pstate.push_back(rot->w);
+            Pstate.push_back(rot->x);
+            Pstate.push_back(rot->y);
+            Pstate.push_back(rot->z);
             path_msg.poses.push_back(pose);
+            path_states.push_back(Pstate);
+
+            // Eigen::Quaternionf q(rot->w, rot->x, rot->y, rot->z);
+            // Eigen::Matrix3f R = q.toRotationMatrix();
+            // Eigen::Vector3f euler = R.eulerAngles(2, 1, 0) * Rad2Angle;
+
+            // airobots_calvin::ArmGoal g;
+            // g.pos.clear();
+            // g.pos.push_back(1.0);
+            // g.pos.push_back(Pstate[0]);
+            // g.pos.push_back(Pstate[1]);
+            // g.pos.push_back(Pstate[2]);
+            // g.pos.push_back(euler[0]);
+            // g.pos.push_back(euler[1]);
+            // g.pos.push_back(euler[2]);
+            // std::cout << "goal: " << g.pos[0] << " " << g.pos[1] << " " << g.pos[2] << " " << g.pos[3] << " " << g.pos[4] << " " << g.pos[5] << " " << g.pos[6] << std::endl;
+
+            // client_armR.pushGoal(g);
         }
-        // path_pub.publish(msg);
+        path_pub.publish(msg);
     }
     else {
         cout << "No solution found" << endl;
     }
 }
 
+deque<vector<float>> GlobalPlanner::GetPath(void) {
+    return path_states;
+}
+
+Eigen::Vector3f GlobalPlanner::Q2Euler(const Eigen::Quaternionf& q) {
+    Eigen::Vector3f euler;
+    euler[0] = atan2(2 * (q.w() * q.x() + q.y() * q.z()), 1 - 2 * (q.x() * q.x() + q.y() * q.y()));
+    euler[1] = 2 * atan2(sqrt(1 + 2 * (q.w() * q.y() - q.x() * q.z())), sqrt(1 - 2 * (q.w() * q.y() - q.x() * q.z()))) - M_PI /2;
+    euler[2] = atan2(2 * (q.w() * q.z() + q.x() * q.y()), 1 - 2 * (q.y() * q.y() + q.z() * q.z()));
+    return euler;
+}
+
+
 void GlobalPlanner::InitialROS(void) {
-    pointcloud_sub = n.subscribe("/points2", 1, &OctreeGen::PointCloudCallback, &octreeGen);
+    pointcloud_sub = n.subscribe("/points2", 1, &OctreeGen::PointCloudCallback, octreeGen);
+    motor_sub = n.subscribe("/armR/motorstatus", 1, &OctreeGen::MotorCallback, octreeGen);
+    // message_filters::Subscriber<sensor_msgs::PointCloud2> points_sub(n, "/points2", 1);
+    // message_filters::Subscriber<airobots_calvin::MotorStatus> motor_sub(n, "/armR/motorstatus", 1);
+    // message_filters::TimeSynchronizer<sensor_msgs::PointCloud2, airobots_calvin::MotorStatus> sync(points_sub, motor_sub, 10);
+    // sync.registerCallback(boost::bind(&OctreeGen::PointCloudCallback, octreeGen, _1, _2));
     octree_pub = n.advertise<octomap_msgs::Octomap>("/octomap", 1);
     path_pub = n.advertise<nav_msgs::Path>("/end_path",1);
     marker_pub = n.advertise<visualization_msgs::MarkerArray>("visualization_marker", 1);
@@ -246,7 +302,7 @@ void GlobalPlanner::InitialROS(void) {
 
 void GlobalPlanner::Ros_spin(void) {
     while(ros::ok()){
-        octree_pub.publish(octreeGen.octree_msg);
+        octree_pub.publish(octreeGen->octree_msg);
         path_pub.publish(path_msg);
         ros::spinOnce();
         loop_rate->sleep();        

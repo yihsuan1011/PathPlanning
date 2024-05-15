@@ -1,4 +1,4 @@
-#include "GlobalPlanner.h"
+#include "LocalPlanner.h"
 
 Eigen::Vector3f Q2Euler(const Eigen::Quaternionf& q)
 {
@@ -16,14 +16,11 @@ int main(int argc, char** argv)
     ArmRight* CRightArm = ArmRight::GetArmRight();
     CRightArm->SetTerminated_flag(terminated_flag);
     OctreeGen* COctreeGen = new OctreeGen();
-    GlobalPlanner* GP = GlobalPlanner::GetGlobalPlanner(CRightArm, COctreeGen);
-    // GP->SetStart({535, -300, -100, 0, 0, 0});
-    GP->SetStart({300, -300, -300, 0, 90, 0});
-    GP->SetGoal({300, -400, -200, 0, 90, 0});
-    GP->Plan();
+    LocalPlanner* LP = LocalPlanner::GetLocalPlanner(CRightArm, COctreeGen);
+    LP->Run();
     *terminated_flag = true;
     // CRightArm->SetTerminated_flag(terminated_flag);
-    delete GP;
+    delete LP;
     delete COctreeGen;
     delete CRightArm;
 

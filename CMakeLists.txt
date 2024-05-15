@@ -24,16 +24,22 @@ find_package(PCL REQUIRED)
 
 set(header
     include/Planner.h
-    include/OctreeGen.h 
+    include/OctreeGen.h
+    include/Kinematics.h
+    include/RMP.h
+    include/ActualNode.h
     include/GlobalPlanner.h
-    # include/LocalPlanner.h 
+    include/LocalPlanner.h 
 )
-set(src 
+set(src
+    src/RMP.cpp
+    src/ActualNode.cpp
     # src/Planner.cpp
     src/GlobalPlanner.cpp
-    # src/LocalPlanner.cpp
+    src/LocalPlanner.cpp
     # src/testOctree.cpp
-    src/testGlobal.cpp
+    # src/testGlobal.cpp
+    src/testLocal.cpp
 )
 # include_directories(${OCTOMAP_INCLUDE_DIRS})
 # target_link_libraries(${OCTOMAP_LIBRARIES})
@@ -51,6 +57,11 @@ target_link_libraries(${PROJECT_NAME} Robot fcl ${catkin_LIBRARIES} ${OCTOMAP_LI
 # target_link_libraries(testOctree ${PROJECT_NAME} ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} ${PCL_LIBRARIES})
 # target_include_directories(testOctree PUBLIC ${catkin_INCLUDE_DIRS} ${OCTOMAP_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 
-add_executable(testGlobal src/testGlobal.cpp)
-target_link_libraries(testGlobal ${PROJECT_NAME} Robot fcl ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} ${PCL_LIBRARIES} ${OMPL_LIBRARIES})
-target_include_directories(testGlobal PUBLIC ${catkin_INCLUDE_DIRS} ${OCTOMAP_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${FCL_INCLUDE_DIRS} ${OMPL_INCLUDE_DIRS})
+# add_executable(testGlobal src/testGlobal.cpp)
+# target_link_libraries(testGlobal ${PROJECT_NAME} Robot fcl ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} ${PCL_LIBRARIES} ${OMPL_LIBRARIES})
+# target_include_directories(testGlobal PUBLIC ${catkin_INCLUDE_DIRS} ${OCTOMAP_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${FCL_INCLUDE_DIRS} ${OMPL_INCLUDE_DIRS})
+
+
+add_executable(testLocal src/testLocal.cpp)
+target_link_libraries(testLocal ${PROJECT_NAME} Robot fcl ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} ${PCL_LIBRARIES} ${OMPL_LIBRARIES})
+target_include_directories(testLocal PUBLIC ${catkin_INCLUDE_DIRS} ${OCTOMAP_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${FCL_INCLUDE_DIRS} ${OMPL_INCLUDE_DIRS})

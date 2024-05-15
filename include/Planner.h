@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <deque>
 #include <forward_list>
 #include <array>
 #include <eigen3/Eigen/Core>
