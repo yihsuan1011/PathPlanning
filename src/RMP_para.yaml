@@ -1,0 +1,48 @@
+GJ: 
+  w_u: 0.5
+  w_l: 0.1
+GT: 
+  w_u: 10.0
+  w_l: 0.1
+GR: 
+  w_u: 10.0
+  w_l: 0.1
+
+C1: 
+  R: 0.1
+  epslion: 0.005
+B1: 
+  R: 0.02
+  epslion: 0.01
+M1: 
+  R: 0.05
+  epslion: 0.01
+T1: 
+  R: 0.005
+  epslion: 0.01
+C21: 
+  R: 0.1
+  epslion: 0.005
+Box1: 
+  R: 0.1
+  epslion: 0.005
+
+
+C2: 
+  R: 0.1
+  epslion: 0.005
+B2: 
+  R: 0.03
+  epslion: 0.01
+M2: 
+  R: 0.03
+  epslion: 0.01
+T2:
+  R: 0.01
+  epslion: 0.01
+C22: 
+  R: 0.1
+  epslion: 0.005
+Box2:
+  R: 0.1
+  epslion: 0.005

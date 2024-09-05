@@ -12,12 +12,15 @@ RMPNode::RMPNode(std::string name, std::shared_ptr<RMPNode> parent,
 
 RMPNode::~RMPNode() {
     for (auto& child : children) {
-        child->parent = nullptr;
+        if (child) {
+            child->parent.reset();
+        }
+        // child->parent = nullptr;
     }
 }
 
 void RMPNode::add_child(std::shared_ptr<RMPNode> child) {
-
+    std::weak_ptr<RMPNode> weak_child = child;
     children.push_back(child);
 }
 
@@ -25,11 +28,11 @@ void RMPNode::pushforward() {
     if (verbose) {
         std::cout << name << ": pushforward" << std::endl;
     }
-    if (parent) {
-        std::cout << name << ": pushforward" << std::endl;
-        x = psi(parent->x);
-        Eigen::MatrixXf J_matrix = J(parent->x);
-        x_dot = J_matrix * parent->x_dot.block(0, 0, J_matrix.cols(), 1);
+    std::shared_ptr<RMPNode> parent_shared = parent.lock();
+    if (parent_shared) {
+        x = psi(parent_shared->x);
+        Eigen::MatrixXf J_matrix = J(parent_shared->x);
+        x_dot = J_matrix * parent_shared->x_dot.block(0, 0, J_matrix.cols(), 1);
     }
     for (auto& child : children) {
         child->pushforward();
@@ -37,7 +40,6 @@ void RMPNode::pushforward() {
 }
 
 void RMPNode::pullback() {
-    std::cout << name << ": pullback" << std::endl;
     for (auto& child : children) {
         child->pullback();
     }
@@ -58,14 +60,14 @@ void RMPNode::pullback() {
                 f_child = temp;
             }
             f_total += f_child;
-            Eigen::MatrixXf M_child = J_child.transpose() * child->M * J_child;
+            Eigen::MatrixXf M_child = Eigen::MatrixXf::Zero(M_total.rows(), M_total.cols());
+            Eigen::MatrixXf ori_M_child = J_child.transpose() * child->M * J_child;
+            M_child.topLeftCorner(ori_M_child.rows(), ori_M_child.cols()) = ori_M_child;
             M_total += M_child;
-            // M_total += J_child.transpose() * child->M * J_child;
         }
     }
     f = f_total;
     M = M_total;
-    std::cout << name << ": pullback done" << std::endl;
 }
 
 // RMPRoot
@@ -92,29 +94,22 @@ Eigen::MatrixXf RMPRoot::resolve() {
 }
 
 Eigen::MatrixXf RMPRoot::solve(const Eigen::MatrixXf& x, const Eigen::MatrixXf& x_dot) {
-    std::cout << "Solving RMP" << std::endl;
     set_root_state(x, x_dot);
-    std::cout << "done setting root state" << std::endl;
     pushforward();
-    std::cout << "done pushforward" << std::endl;
     pullback();
-    std::cout << "done pullback" << std::endl;
     return resolve();
 }
 
 // RMPLeaf
 void RMPLeaf::eval_leaf() {
-    std::cout << name << ": eval_leaf" << std::endl;
     RMP_function();
 }
 
 void RMPLeaf::pullback() {
-    std::cout << name << ": pullback" << std::endl;
     if (verbose) {
         std::cout << name << ": pullback" << std::endl;
     }
     eval_leaf();
-    std::cout << name << ": pullback eval done" << std::endl; 
 }
 
 void RMPLeaf::add_child(std::shared_ptr<RMPNode> child) {

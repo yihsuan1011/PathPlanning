@@ -3,6 +3,8 @@
 #include <ros/ros.h>
 #include <airobots_calvin/MotorInfo.h>
 #include <airobots_calvin/MotorStatus.h>
+#include <geometry_msgs/Point.h>
+#include <sensor_msgs/JointState.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <deque>
@@ -24,7 +26,6 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/octree/octree_pointcloud_changedetector.h>
-#include <geometry_msgs/Point.h>
 
 
 class OctreeGen{
@@ -82,16 +83,16 @@ class OctreeGen{
             // MotorCallback(motor_msg);
             
             PointCloudProcess(transformed_cloud);
-            cloudDiff(curr_cloud, ori_cloud, diff_cloud);
-            if(!static_flag) {
-                StaticDectect();
-            }
-            else {
-                PointCloud2Octree(curr_cloud_msg, curr_octree);
-                PointCloud2Octree(diff_cloud_msg, diff_octree);
-                if(ori_octree == NULL)
-                    PointCloud2Octree(ori_cloud_msg, ori_octree);
-            }
+            // cloudDiff(curr_cloud, ori_cloud, diff_cloud);
+            // if(!static_flag) {
+            //     StaticDectect();
+            // }
+            // else {
+            //     PointCloud2Octree(curr_cloud_msg, curr_octree);
+            //     PointCloud2Octree(diff_cloud_msg, diff_octree);
+            //     if(ori_octree == NULL)
+            //         PointCloud2Octree(ori_cloud_msg, ori_octree);
+            // }
 
             update_flag = true;
             motor_update_flag = true;
@@ -99,6 +100,23 @@ class OctreeGen{
             octomap_msgs::fullMapToMsg(*curr_octree, octree_msg);
             octree_msg.header.stamp = ros::Time::now();
             octree_msg.header.frame_id = transformed_cloud.header.frame_id;
+        }
+
+        void SimMotorCallback(const sensor_msgs::JointStateConstPtr& msg){
+            if(motor_update_flag) {
+                std::vector<std::string> names = {"right_joint1", "right_joint2", "right_joint3", "right_joint4", "right_joint5", "right_joint6"};
+                int size = msg->position.size();
+                for (int i = 0; i < size; i++) {
+                    if (msg->name[i] == names[0]) joint_angles[0] = msg->position[i];
+                    else if (msg->name[i] == names[1]) joint_angles[1] = msg->position[i];
+                    else if (msg->name[i] == names[2]) joint_angles[2] = msg->position[i];
+                    else if (msg->name[i] == names[3]) joint_angles[3] = msg->position[i];
+                    else if (msg->name[i] == names[4]) joint_angles[4] = msg->position[i];
+                    else if (msg->name[i] == names[5]) joint_angles[5] = msg->position[i];
+                }
+                key_joint_pos = getJointPosition(joint_angles);
+                motor_update_flag = false;
+            }
         }
 
         void MotorCallback(const airobots_calvin::MotorStatusConstPtr& msg){
@@ -216,13 +234,13 @@ class OctreeGen{
             filter2.filter(*cloud1);
             cloud2->clear();
 
-            pcl::VoxelGrid<pcl::PointXYZ> filter3;
-            filter3.setInputCloud(cloud1);
-            filter3.setLeafSize(0.05, 0.05, 0.05);
-            filter3.filter(*cloud2);
-            cloud1->clear();
+            // pcl::VoxelGrid<pcl::PointXYZ> filter3;
+            // filter3.setInputCloud(cloud1);
+            // filter3.setLeafSize(0.05, 0.05, 0.05);
+            // filter3.filter(*cloud2);
+            // cloud1->clear();
 
-            ArmFiler(cloud2, cloud1);
+            // ArmFiler(cloud2, cloud1);
 
             curr_cloud = *cloud1;
             if (ori_cloud.size() == 0) ori_cloud = curr_cloud;

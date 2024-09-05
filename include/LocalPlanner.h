@@ -7,19 +7,28 @@
 #include "Kinematics.h"
 #include "visualization_msgs/Marker.h"
 #include "visualization_msgs/MarkerArray.h"
+#include <sensor_msgs/JointState.h>
 
 #include "fcl/config.h"
 #include "fcl/narrowphase/distance.h"
 #include "fcl/common/types.h"
+
+# include <yaml-cpp/yaml.h>
+
+#include <airobots_calvin/ArmAction.h>
+#include "Actions/ActionClient.h"
+#include <fstream>
 
 class LocalPlanner
 {
 private:
     void UpdateJoints(void);
     void UpdateArmFCL(void);
+    void PubMarkers(void);
+    void PubJoints(void);
     void UpdateFCL(void);
     void UpdateDis(void);
-    std::shared_ptr<RMPRoot> getRMP(const Eigen::Vector3f& goal_pos, const Eigen::Vector4f& goal_ori);
+    std::shared_ptr<RMPRoot> getRMP(const vector<float>& goal);
     Eigen::Matrix<float, 6, 2> Dynamics(Eigen::Matrix<float, 6, 2>& s, std::shared_ptr<RMPRoot> root);
     void CollsionPair(const int& idx, fcl::CollisionObjectf& obj1, fcl::CollisionObjectf& obj2);
 
@@ -33,10 +42,13 @@ private:
     void StopROS(void);
 
     static LocalPlanner* inst_;
+    bool* terminated;
     Arm* CArm;
     OctreeGen* octreeGen;
     GlobalPlanner* GPlanner;
     ros::NodeHandle n;
+    ros::Publisher marker_pub;
+    ros::Publisher joint_pub;
     ros::Subscriber human_sub;
     ros::Subscriber ball_sub;
     std::thread* ros_thread;
@@ -45,9 +57,11 @@ private:
     vector<Eigen::Vector3f> key_joint_pos;
     octomap::OcTree* curr_octree;
     Eigen::Vector3f ball_pos;
+    Eigen::Vector3f ball_pos2;
     std::shared_ptr<fcl::CollisionGeometryf> curr_tree;
     vector<fcl::CollisionObjectf> ObjRobot;  // link1, link2, body, mobile
     deque<vector<float>> Path;
+    int max_iter;
 
     Eigen::Vector3f goal_pos;
     Eigen::Vector3f goal_ori;
@@ -55,15 +69,16 @@ private:
     Eigen::Vector3f curr_ori;
 
 public:
-    static LocalPlanner* GetLocalPlanner(Arm* carm, OctreeGen* octreegen);
-    LocalPlanner(Arm* carm, OctreeGen* octreegen);
+    static LocalPlanner* GetLocalPlanner(bool* t, Arm* carm, OctreeGen* octreegen);
+    LocalPlanner(bool* t, Arm* carm, OctreeGen* octreegen);
     ~LocalPlanner();
     void Run(void);
-    float Move(const Eigen::Vector3f& goal_pos, const Eigen::Vector4f& goal_ori);
+    float Move(const vector<float>& goal);
     
     void HumanCallback(const visualization_msgs::MarkerArray::ConstPtr& msg);
     Eigen::Quaternionf Vec2Q(const Eigen::Vector3f& vec);
     
+    // Client<airobots_calvin::ArmAction> client_armR;
     // armClient client_armR;
     Eigen::Matrix<float, 6, 2> state;
     // Eigen::Vector3f curr_goal_pos;

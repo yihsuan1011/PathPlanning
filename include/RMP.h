@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <Eigen/Dense>
 #include <memory>
@@ -15,11 +16,11 @@ public:
     void add_child(std::shared_ptr<RMPNode> child);
     virtual void pushforward();
     virtual void pullback();
-    float get_error() {return 0.0;}
+    virtual float get_error() {return 0.0;}
     // Eigen::MatrixXf resolve() = 0;
     // Node properties
     std::string name;
-    std::shared_ptr<RMPNode> parent;
+    std::weak_ptr<RMPNode> parent;
     std::vector<std::shared_ptr<RMPNode>> children;
     bool isLeaf;
 
@@ -48,7 +49,7 @@ public:
 class RMPRoot : public RMPNode
 {
 public:
-    RMPRoot(const std::string& name): RMPNode(name, nullptr) {}
+    RMPRoot(const std::string& name): RMPNode(name, nullptr) {children.reserve(8); isLeaf = false;}
     void set_root_state(const Eigen::MatrixXf& x, const Eigen::MatrixXf& x_dot);
     void pushforward(void) override;
     void pullback(void) override {RMPNode::pullback();}
@@ -69,7 +70,7 @@ public:
     void add_child(std::shared_ptr<RMPNode> child);
     void update_params();
     void update();
-    float get_error();
+    float get_error() override;
     float err;
 
 private:
